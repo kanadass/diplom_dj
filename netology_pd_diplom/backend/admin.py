@@ -18,54 +18,111 @@ class CustomUserAdmin(UserAdmin):
         ('Permissions', {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
-        ('Important dates', {'fields': ('last_login', 'date_joined')}),
-    )
+        ('Important dates', {'fields': ('last_login', 'date_joined')}),)
     list_display = ('email', 'first_name', 'last_name', 'is_staff')
-
+    ordering = ('email', 'first_name', 'last_name', 'is_staff')
+    list_editable = ('is_staff',)
+    list_per_page = 10
 
 @admin.register(Shop)
 class ShopAdmin(admin.ModelAdmin):
-    pass
+    """
+    Панель управления магазинами
+    """
+    list_display = ('name', 'url', 'user', 'state')
+    list_filter = ('name', 'state')
+
+
+class ProductInline(admin.TabularInline):
+    model = Product
+    extra = 1
 
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    pass
+    """
+    Панель управления категориями
+    """
+    inlines = [ProductInline]
 
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    pass
+    """
+    Панель управления продуктами
+    """
+    list_display = ('id', 'name', 'category')
+    list_display_links = ('id', 'name')
+    ordering = ('name',)
+    list_editable = ('category',)
+    list_filter = ('id', 'name', 'category')
+    search_fields = ('id', 'name', 'category')
+
+
+class ProductParameterInline(admin.TabularInline):
+    model = ProductParameter
+    extra = 1
 
 
 @admin.register(ProductInfo)
 class ProductInfoAdmin(admin.ModelAdmin):
-    pass
+    """
+    Панель управления информацией о продукте
+    """
+    list_display = ('product', 'external_id', 'shop', 'price', 'price_rrc', 'quantity')
+    inlines = [ProductParameterInline]
 
 
 @admin.register(Parameter)
 class ParameterAdmin(admin.ModelAdmin):
-    pass
+    """
+    Панель управления параметрами
+    """
+    list_display = ('name',)
+    search_fields = ('name',)
 
 
 @admin.register(ProductParameter)
 class ProductParameterAdmin(admin.ModelAdmin):
-    pass
+    """
+    Панель управления параметрами продукта
+    """
+    list_display = ('product_info', 'parameter', 'value')
+    list_filter = ('parameter', 'value')
+    search_fields = ('product_info__product__name', 'parameter__name',)
+
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 1
 
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    pass
+    """
+    Панель управления заказами
+    """
+    list_display = ('id', 'user', 'dt', 'state', 'contact')
+    list_filter = ('dt', 'state')
+    inlines = [OrderItemInline]
 
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    pass
+    """
+    Панель управления заказанными позициями
+    """
+    list_display = ('id', 'order', 'product_info', 'quantity')
 
 
 @admin.register(Contact)
 class ContactAdmin(admin.ModelAdmin):
-    pass
+    """
+    Панель управления контактами
+    """
+    list_display = ('user', 'city', 'street', 'phone')
+    list_filter = ('city', 'street')
+    search_fields = ('user__email', 'city', 'street', 'phone')
 
 
 @admin.register(ConfirmEmailToken)
