@@ -12,8 +12,10 @@ click-repl==0.3.0
 Django==5.0.6
 django-rest-passwordreset==1.4.1
 djangorestframework==3.14.0
+gunicorn==22.0.0
 idna==3.7
 kombu==5.3.7
+packaging==24.0
 prompt-toolkit==3.0.43
 psycopg2-binary==2.9.9
 python-dateutil==2.9.0.post0
