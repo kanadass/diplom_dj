@@ -14,10 +14,15 @@ django-rest-passwordreset==1.4.1
 djangorestframework==3.14.0
 gunicorn==22.0.0
 idna==3.7
+iniconfig==2.0.0
 kombu==5.3.7
+model-bakery==1.18.0
 packaging==24.0
+pluggy==1.5.0
 prompt-toolkit==3.0.43
 psycopg2-binary==2.9.9
+pytest==8.2.1
+pytest-django==4.8.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pytz==2024.1
