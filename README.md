@@ -62,4 +62,4 @@
 
 Приложение будет доступно по адресу: [http://127.0.0.1:80/](http://127.0.0.1:80/)
 
-Документация по API: [Postman](https://documenter.getpostman.com/view/5037826/SVfJUrSc)
+Документация по API: [Swagger](http://127.0.0.1:8000/api/schema/swagger-ui/)

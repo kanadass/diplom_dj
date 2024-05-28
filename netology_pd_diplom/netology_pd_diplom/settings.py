@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'drf_spectacular',
     'rest_framework.authtoken',
     'django_rest_passwordreset',
     'backend',
@@ -158,6 +159,14 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ),
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Retail Network Order Service API',
+    'DESCRIPTION': 'API documentation for the Retail Network Order Service, which allows users to manage and order products for retail networks.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -16,12 +16,27 @@ class ContactSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     contacts = ContactSerializer(read_only=True, many=True)
+    password = serializers.CharField(max_length=100)
 
     class Meta:
         model = User
-        fields = ('id', 'first_name', 'last_name', 'email', 'company', 'position', 'contacts')
+        fields = ('id', 'first_name', 'last_name', 'email', 'password', 'company', 'position', 'contacts')
         read_only_fields = ('id',)
 
+class EmailTokenSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    token = serializers.CharField(max_length=100)
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(max_length=100)
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ('id', 'product_info', 'quantity', 'order')
+        read_only_fields = ("id",)
+        extra_kwargs = {"order": {"write_only": True}}
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -63,16 +78,6 @@ class ProductInfoSerializer(serializers.ModelSerializer):
         read_only_fields = ('id',)
 
 
-class OrderItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderItem
-        fields = ('id', 'product_info', 'quantity', 'order',)
-        read_only_fields = ('id',)
-        extra_kwargs = {
-            'order': {'write_only': True}
-        }
-
-
 class OrderItemCreateSerializer(OrderItemSerializer):
     product_info = ProductInfoSerializer(read_only=True)
 
@@ -87,3 +92,4 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ('id', 'ordered_items', 'state', 'dt', 'total_sum', 'contact',)
         read_only_fields = ('id',)
+

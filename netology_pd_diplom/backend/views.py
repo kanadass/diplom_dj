@@ -1,5 +1,9 @@
+from copy import deepcopy
 from distutils.util import strtobool
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter, OpenApiExample
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -20,13 +24,23 @@ from rest_framework.throttling import UserRateThrottle
 from backend.models import Shop, Category, ProductInfo, Order, OrderItem, \
     Contact, ConfirmEmailToken
 from backend.serializers import UserSerializer, CategorySerializer, ShopSerializer, ProductInfoSerializer, \
-    OrderItemSerializer, OrderSerializer, ContactSerializer
+    OrderItemSerializer, OrderSerializer, ContactSerializer, EmailTokenSerializer, LoginSerializer
 from backend.tasks import new_user_registered, new_order, do_import
 
 
 class RegisterAccount(APIView):
     """Для регистрации покупателей """
     throttle_scope = 'register'
+
+    @extend_schema(
+        summary="Create a new user account",
+        request=UserSerializer,
+        responses={
+            201: OpenApiResponse(description="User successfully registered."),
+            400: OpenApiResponse(description="Missing required fields."),
+            403: OpenApiResponse(description="Password validation errors or other errors.")
+        }
+    )
 
     def post(self, request, *args, **kwargs):
         """Метод post проверяет наличие обязательных полей,
@@ -71,6 +85,16 @@ class ConfirmAccount(APIView):
     Класс для подтверждения почтового адреса
     """
 
+    @extend_schema(
+        summary="Confirm user email",
+        request=EmailTokenSerializer,
+        responses={
+            200: OpenApiResponse(description="Email successfully confirmed."),
+            400: OpenApiResponse(description="Missing required fields."),
+            403: OpenApiResponse(description="Invalid token or email.")
+        }
+    )
+
     # Регистрация методом POST
     def post(self, request, *args, **kwargs):
         """
@@ -110,6 +134,17 @@ class AccountDetails(APIView):
     - None
     """
 
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Retrieve user account details",
+        description="Retrieve the details of the authenticated user.",
+        responses={
+            200: UserSerializer,
+            403: OpenApiResponse(description="Log in required.")
+        }
+    )
+
     # получить данные
     def get(self, request: Request, *args, **kwargs):
         """
@@ -126,6 +161,16 @@ class AccountDetails(APIView):
 
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+    @extend_schema(
+        summary="Update user account details",
+        request=UserSerializer,
+        responses={
+            200: OpenApiResponse(description="Account details updated successfully."),
+            400: OpenApiResponse(description="Validation errors."),
+            403: OpenApiResponse(description="Log in required.")
+        }
+    )
 
     # Редактирование методом POST
     def post(self, request, *args, **kwargs):
@@ -169,6 +214,16 @@ class LoginAccount(APIView):
     """
     Класс для авторизации пользователей
     """
+
+    @extend_schema(
+        summary="Authenticate user",
+        request=LoginSerializer,
+        responses={
+            200: OpenApiResponse(description="User successfully authenticated."),
+            400: OpenApiResponse(description="Missing required fields."),
+            403: OpenApiResponse(description="Authentication failed.")
+        }
+    )
 
     # Авторизация методом POST
     def post(self, request, *args, **kwargs):
@@ -222,6 +277,19 @@ class ProductInfoView(APIView):
         - None
         """
 
+
+    @extend_schema(
+        summary="Retrieve product information",
+        parameters=[
+            OpenApiParameter(name='shop_id', description='ID of the shop', required=False, type=int),
+            OpenApiParameter(name='category_id', description='ID of the category', required=False, type=int)
+        ],
+        responses={
+            200: ProductInfoSerializer(many=True),
+            400: OpenApiResponse(description="Invalid query parameters.")
+        }
+    )
+
     def get(self, request: Request, *args, **kwargs):
         """
                Retrieve the product information based on the specified filters.
@@ -242,7 +310,7 @@ class ProductInfoView(APIView):
         if category_id:
             query = query & Q(product__category_id=category_id)
 
-        # фильтруем и отбрасываем дуликаты
+        # фильтруем и отбрасываем дупликаты
         queryset = ProductInfo.objects.filter(
             query).select_related(
             'shop', 'product__category').prefetch_related(
@@ -267,17 +335,16 @@ class BasketView(APIView):
     - None
     """
 
-    # получить корзину
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        summary="Retrieve items in the user's basket",
+        responses={
+            200: OrderSerializer(many=True),
+            403: OpenApiResponse(description="Log in required.")
+        }
+    )
     def get(self, request, *args, **kwargs):
-        """
-                Retrieve the items in the user's basket.
-
-                Args:
-                - request (Request): The Django request object.
-
-                Returns:
-                - Response: The response containing the items in the user's basket.
-                """
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
         basket = Order.objects.filter(
@@ -289,46 +356,96 @@ class BasketView(APIView):
         serializer = OrderSerializer(basket, many=True)
         return Response(serializer.data)
 
-    # редактировать корзину
+    @extend_schema(
+        summary="Add an item to the user's basket",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'items': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'product_info': {'type': 'integer'},
+                                'quantity': {'type': 'integer'}
+                            }
+                        }
+                    }
+                },
+                'example': {
+                    'items': [
+                        {
+                            'product_info': 1,
+                            'quantity': 2
+                        },
+                        {
+                            'product_info': 2,
+                            'quantity': 1
+                        }
+                    ]
+                }
+            }
+        },
+        responses={
+            200: OpenApiResponse(description="Items successfully added to the basket."),
+            400: OpenApiResponse(description="Validation errors."),
+            403: OpenApiResponse(description="Log in required.")
+        }
+    )
+
     def post(self, request, *args, **kwargs):
-        """
-               Add an items to the user's basket.
-
-               Args:
-               - request (Request): The Django request object.
-
-               Returns:
-               - JsonResponse: The response indicating the statuяs of the operation and any errors.
-               """
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
-        items_sting = request.data.get('items')
-        if items_sting:
-            try:
-                items_dict = load_json(items_sting)
-            except ValueError:
-                return JsonResponse({'Status': False, 'Errors': 'Неверный формат запроса'})
-            else:
-                basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
-                objects_created = 0
-                for order_item in items_dict:
-                    order_item.update({'order': basket.id})
+        items_data = request.data.get('items')
+        if isinstance(items_data, list):
+            basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
+            objects_created = 0
+            errors = []
+
+            for order_item in items_data:
+                if isinstance(order_item, dict):
+                    order_item['order'] = basket.id
                     serializer = OrderItemSerializer(data=order_item)
                     if serializer.is_valid():
                         try:
                             serializer.save()
-                        except IntegrityError as error:
-                            return JsonResponse({'Status': False, 'Errors': str(error)})
-                        else:
                             objects_created += 1
-
+                        except IntegrityError as error:
+                            errors.append(str(error))
                     else:
+                        errors.append(serializer.errors)
+                else:
+                    errors.append('Order item should be a dictionary')
 
-                        return JsonResponse({'Status': False, 'Errors': serializer.errors})
+            if errors:
+                return JsonResponse({'Status': False, 'Errors': errors})
 
-                return JsonResponse({'Status': True, 'Создано объектов': objects_created})
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+            return JsonResponse({'Status': True, 'Создано объектов': objects_created})
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы или неверный формат данных'})
+
+    @extend_schema(
+        summary="Remove an item from the user's basket",
+        parameters=[
+            OpenApiParameter(
+                "items_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Comma-separated list of item IDs to be removed from the basket",
+                examples =[
+                    OpenApiExample(
+                        name='Example',
+                        value='1,2,3'
+                    ),
+                ],
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(description="Item successfully removed from the basket."),
+            403: OpenApiResponse(description="Log in required.")
+        }
+    )
 
     # удалить товары из корзины
     def delete(self, request, *args, **kwargs):
@@ -344,7 +461,7 @@ class BasketView(APIView):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
-        items_sting = request.data.get('items')
+        items_sting = request.query_params.get('items_id')
         if items_sting:
             items_list = items_sting.split(',')
             basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
@@ -360,32 +477,73 @@ class BasketView(APIView):
                 return JsonResponse({'Status': True, 'Удалено объектов': deleted_count})
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
+    @extend_schema(
+        summary="Update the quantity of an item in the user's basket",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'items': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'product_info': {'type': 'integer'},
+                                'quantity': {'type': 'integer'}
+                            }
+                        }
+                    }
+                },
+                'example': {
+                    'items': [
+                        {
+                            'product_info': 1,
+                            'quantity': 2
+                        },
+                        {
+                            'product_info': 2,
+                            'quantity': 1
+                        }
+                    ]
+                }
+            }
+        },
+        responses={
+            200: OpenApiResponse(description="Items successfully updated in the basket."),
+            400: OpenApiResponse(description="Validation errors."),
+            403: OpenApiResponse(description="Log in required.")
+        }
+    )
+
     # добавить позиции в корзину
     def put(self, request, *args, **kwargs):
         """
-               Update the items in the user's basket.
+        Update the items in the user's basket.
 
-               Args:
-               - request (Request): The Django request object.
+        Args:
+        - request (Request): The Django request object.
 
-               Returns:
-               - JsonResponse: The response indicating the status of the operation and any errors.
-               """
+        Returns:
+        - JsonResponse: The response indicating the status of the operation and any errors.
+        """
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
-        items_sting = request.data.get('items')
-        if items_sting:
+        items_list = request.data.get('items')
+        if items_list:
             try:
-                items_dict = load_json(items_sting)
+                # Проверка типа данных items_list
+                if not isinstance(items_list, list):
+                    raise ValueError
             except ValueError:
                 return JsonResponse({'Status': False, 'Errors': 'Неверный формат запроса'})
             else:
                 basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
                 objects_updated = 0
-                for order_item in items_dict:
-                    if type(order_item['id']) == int and type(order_item['quantity']) == int:
-                        objects_updated += OrderItem.objects.filter(order_id=basket.id, id=order_item['id']).update(
+                for order_item in items_list:
+                    if isinstance(order_item['product_info'], int) and isinstance(order_item['quantity'], int):
+                        objects_updated += OrderItem.objects.filter(order_id=basket.id,
+                                                                    product_info_id=order_item['product_info']).update(
                             quantity=order_item['quantity'])
 
                 return JsonResponse({'Status': True, 'Обновлено объектов': objects_updated})
@@ -396,8 +554,32 @@ class PartnerUpdate(APIView):
     """
     Класс для обновления прайса от поставщика
     """
-
+    permission_classes = (IsAuthenticated,)
     throttle_classes = (UserRateThrottle,)
+
+    @extend_schema(
+        summary="Update price from supplier",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'url': {
+                        'type': 'string',
+                        'format': 'uri',
+                        'description': 'URL to the price list file'
+                    }
+                },
+                'example': {
+                    'url': 'https://raw.githubusercontent.com/netology-code/pd-diplom/master/data/shop1.yaml'
+                }
+            }
+        },
+        responses={
+            200: OpenApiResponse(description="Price list update initiated successfully."),
+            400: OpenApiResponse(description="All necessary arguments are not specified."),
+            403: OpenApiResponse(description="Log in required or user is not a shop.")
+        }
+    )
 
     def post(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -432,6 +614,19 @@ class PartnerState(APIView):
        Attributes:
        - None
        """
+
+    permission_classes = (IsAuthenticated,)
+
+
+    @extend_schema(
+        summary="Retrieve the state of the partner",
+        responses={
+            200: ShopSerializer,
+            403: OpenApiResponse(description="Log in required or only for shops."),
+            404: OpenApiResponse(description="Shop not found for the user."),
+        },
+    )
+
     # получить текущий статус
     def get(self, request, *args, **kwargs):
         """
@@ -453,31 +648,49 @@ class PartnerState(APIView):
         serializer = ShopSerializer(shop)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Update the state of the partner",
+        parameters=[
+            OpenApiParameter(
+                name="state",
+                type={'type': 'boolean'},
+                location=OpenApiParameter.QUERY,
+                description="The new state of the shop. True for active, False for inactive.",
+            )
+        ],
+        responses={
+            200: OpenApiResponse(description="State updated successfully."),
+            400: OpenApiResponse(description="Invalid arguments or ValueError."),
+            403: OpenApiResponse(description="Log in required or only for shops.")
+        }
+    )
+
     # изменить текущий статус
     def post(self, request, *args, **kwargs):
         """
-               Update the state of a partner.
+        Update the state of a partner.
 
-               Args:
-               - request (Request): The Django request object.
+        Args:
+        - request (Request): The Django request object.
 
-               Returns:
-               - JsonResponse: The response indicating the status of the operation and any errors.
-               """
+        Returns:
+        - JsonResponse: The response indicating the status of the operation and any errors.
+        """
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
         if request.user.type != 'shop':
             return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
-        state = request.data.get('state')
-        if state:
+
+        state = request.query_params.get('state')
+        if state is not None:
             try:
-                Shop.objects.filter(user_id=request.user.id).update(state=strtobool(state))
+                Shop.objects.filter(user_id=request.user.id).update(state=bool(strtobool(state)))
                 return JsonResponse({'Status': True})
             except ValueError as error:
-                return JsonResponse({'Status': False, 'Errors': str(error)})
+                return JsonResponse({'Status': False, 'Errors': str(error)}, status=400)
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status=400)
 
 
 class PartnerOrders(APIView):
@@ -489,6 +702,16 @@ class PartnerOrders(APIView):
     Attributes:
     - None
     """
+
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        summary="Retrieve orders associated with the authenticated partner.",
+        responses={
+            200: OrderSerializer(many=True),
+            403: OpenApiResponse(description="Log in required.")
+        }
+    )
 
     def get(self, request, *args, **kwargs):
         """
@@ -512,6 +735,9 @@ class PartnerOrders(APIView):
             'ordered_items__product_info__product_parameters__parameter').select_related('contact').annotate(
             total_sum=Sum(F('ordered_items__quantity') * F('ordered_items__product_info__price'))).distinct()
 
+        if not order.exists():
+            print("No orders found for this partner.")
+
         serializer = OrderSerializer(order, many=True)
         return Response(serializer.data)
 
@@ -529,6 +755,16 @@ class ContactView(APIView):
        Attributes:
        - None
        """
+
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        summary="Retrieve contact information of the authenticated user.",
+        responses={
+            200: ContactSerializer(many=True),
+            403: OpenApiResponse(description="Log in required.")
+        }
+    )
 
     # получить мои контакты
     def get(self, request, *args, **kwargs):
@@ -548,24 +784,29 @@ class ContactView(APIView):
         serializer = ContactSerializer(contact, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary='Create a new contact for the authenticated user',
+        request=ContactSerializer,
+        responses={
+            200: ContactSerializer(many=True),
+            400: OpenApiResponse(description="Validation errors."),
+            403: OpenApiResponse(description="Log in required.")
+        },
+    )
+
     # добавить новый контакт
     def post(self, request, *args, **kwargs):
         """
-               Create a new contact for the authenticated user.
-
-               Args:
-               - request (Request): The Django request object.
-
-               Returns:
-               - JsonResponse: The response indicating the status of the operation and any errors.
-               """
+        Create a new contact for the authenticated user.
+        """
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
-        if {'city', 'street', 'phone'}.issubset(request.data):
-            request.data._mutable = True
-            request.data.update({'user': request.user.id})
-            serializer = ContactSerializer(data=request.data)
+        required_fields = {'city', 'street', 'phone'}
+        if required_fields.issubset(request.data):
+            mutable_data = deepcopy(request.data)  # Create a mutable copy
+            mutable_data.update({'user': request.user.id})
+            serializer = ContactSerializer(data=mutable_data)
 
             if serializer.is_valid():
                 serializer.save()
@@ -573,25 +814,46 @@ class ContactView(APIView):
             else:
                 return JsonResponse({'Status': False, 'Errors': serializer.errors})
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Not all required arguments are specified'})
 
-    # удалить контакт
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "items",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Comma-separated list of contact IDs to delete.",
+                examples=[
+                    OpenApiExample(
+                        name='Example',
+                        value='1,2,3'
+                    ),
+                ],
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(description="Contacts successfully deleted."),
+            400: OpenApiResponse(description="All necessary arguments are not specified."),
+            403: OpenApiResponse(description="Log in required.")
+        }
+    )
+
     def delete(self, request, *args, **kwargs):
         """
-               Delete the contact of the authenticated user.
+        Delete the contact of the authenticated user.
 
-               Args:
-               - request (Request): The Django request object.
+        Args:
+        - request (Request): The Django request object.
 
-               Returns:
-               - JsonResponse: The response indicating the status of the operation and any errors.
-               """
+        Returns:
+        - JsonResponse: The response indicating the status of the operation and any errors.
+        """
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
-        items_sting = request.data.get('items')
-        if items_sting:
-            items_list = items_sting.split(',')
+        items_string = request.query_params.get('items')
+        if items_string:
+            items_list = items_string.split(',')
             query = Q()
             objects_deleted = False
             for contact_id in items_list:
@@ -602,7 +864,41 @@ class ContactView(APIView):
             if objects_deleted:
                 deleted_count = Contact.objects.filter(query).delete()[0]
                 return JsonResponse({'Status': True, 'Удалено объектов': deleted_count})
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status=400)
+
+    @extend_schema(
+        summary="Update the contact information of the authenticated user",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'id': {'type': 'string'},
+                    'city': {'type': 'string'},
+                    'street': {'type': 'string'},
+                    'house': {'type': 'string'},
+                    'structure': {'type': 'string'},
+                    'building': {'type': 'string'},
+                    'apartment': {'type': 'string'},
+                    'phone': {'type': 'string'},
+                },
+                'example': {
+                    'id': '1',
+                    'city': 'string',
+                    'street': 'string',
+                    'house': 'string',
+                    'structure': 'string',
+                    'building': 'string',
+                    'apartment': 'string',
+                    'phone': 'string',
+                }
+            }
+        },
+        responses={
+            200: OpenApiResponse(description="Contact successfully updated."),
+            400: OpenApiResponse(description="Validation errors."),
+            403: OpenApiResponse(description="Log in required.")
+        }
+    )
 
     # редактировать контакт
     def put(self, request, *args, **kwargs):
@@ -646,6 +942,14 @@ class OrderView(APIView):
     - None
     """
 
+    @extend_schema(
+        summary="Retrieve user orders",
+        responses={
+            200: OrderSerializer(many=True),
+            403: OpenApiResponse(description="Log in required.")
+        }
+    )
+
     # получить мои заказы
     def get(self, request, *args, **kwargs):
         """
@@ -667,6 +971,29 @@ class OrderView(APIView):
 
         serializer = OrderSerializer(order, many=True)
         return Response(serializer.data)
+
+    @extend_schema(
+        summary="Place an order and send a notification",
+        description="Place an order by specifying the order ID and contact, and send a notification.",
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'id': {'type': 'string', 'description': 'Order ID'},
+                    'contact': {'type': 'string', 'description': 'Contact ID'}
+                },
+                'example': {
+                    'id': '1',
+                    'contact': '1'
+                }
+            }
+        },
+        responses={
+            200: OpenApiResponse(description="Order placed successfully."),
+            400: OpenApiResponse(description="Invalid arguments or IntegrityError."),
+            403: OpenApiResponse(description="Log in required.")
+        }
+    )
 
     # разместить заказ из корзины
     def post(self, request, *args, **kwargs):
