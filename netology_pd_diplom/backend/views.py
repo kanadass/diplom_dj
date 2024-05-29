@@ -27,6 +27,8 @@ from backend.serializers import UserSerializer, CategorySerializer, ShopSerializ
     OrderItemSerializer, OrderSerializer, ContactSerializer, EmailTokenSerializer, LoginSerializer
 from backend.tasks import new_user_registered, new_order, do_import
 
+from backend.permissions import IsOwner
+
 
 class RegisterAccount(APIView):
     """Для регистрации покупателей """
@@ -134,7 +136,7 @@ class AccountDetails(APIView):
     - None
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwner]
 
     @extend_schema(
         summary="Retrieve user account details",
@@ -974,7 +976,6 @@ class OrderView(APIView):
 
     @extend_schema(
         summary="Place an order and send a notification",
-        description="Place an order by specifying the order ID and contact, and send a notification.",
         request={
             'application/json': {
                 'type': 'object',
