@@ -18,8 +18,7 @@ from ujson import loads as load_json
 from rest_framework import status
 
 
-from rest_framework.throttling import UserRateThrottle
-
+from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 
 from backend.models import Shop, Category, ProductInfo, Order, OrderItem, \
     Contact, ConfirmEmailToken
@@ -87,6 +86,9 @@ class ConfirmAccount(APIView):
     Класс для подтверждения почтового адреса
     """
 
+    throttle_classes = (AnonRateThrottle,)
+
+
     @extend_schema(
         summary="Confirm user email",
         request=EmailTokenSerializer,
@@ -137,6 +139,7 @@ class AccountDetails(APIView):
     """
 
     permission_classes = [IsAuthenticated, IsOwner]
+    throttle_classes = (UserRateThrottle,)
 
     @extend_schema(
         summary="Retrieve user account details",
@@ -217,6 +220,8 @@ class LoginAccount(APIView):
     Класс для авторизации пользователей
     """
 
+    throttle_classes = (AnonRateThrottle,)
+
     @extend_schema(
         summary="Authenticate user",
         request=LoginSerializer,
@@ -279,6 +284,8 @@ class ProductInfoView(APIView):
         - None
         """
 
+    throttle_classes = (AnonRateThrottle,)
+
 
     @extend_schema(
         summary="Retrieve product information",
@@ -338,6 +345,7 @@ class BasketView(APIView):
     """
 
     permission_classes = (IsAuthenticated,)
+    throttle_classes = (UserRateThrottle,)
 
     @extend_schema(
         summary="Retrieve items in the user's basket",
@@ -618,7 +626,7 @@ class PartnerState(APIView):
        """
 
     permission_classes = (IsAuthenticated,)
-
+    throttle_classes = (UserRateThrottle,)
 
     @extend_schema(
         summary="Retrieve the state of the partner",
@@ -706,6 +714,7 @@ class PartnerOrders(APIView):
     """
 
     permission_classes = (IsAuthenticated,)
+    throttle_classes = (UserRateThrottle,)
 
     @extend_schema(
         summary="Retrieve orders associated with the authenticated partner.",
@@ -759,6 +768,7 @@ class ContactView(APIView):
        """
 
     permission_classes = (IsAuthenticated,)
+    throttle_classes = (UserRateThrottle,)
 
     @extend_schema(
         summary="Retrieve contact information of the authenticated user.",
@@ -943,6 +953,9 @@ class OrderView(APIView):
     Attributes:
     - None
     """
+
+    permission_classes = (IsAuthenticated,)
+    throttle_classes = (UserRateThrottle,)
 
     @extend_schema(
         summary="Retrieve user orders",

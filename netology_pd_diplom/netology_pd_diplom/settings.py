@@ -155,11 +155,18 @@ REST_FRAMEWORK = {
     ),
 
     'DEFAULT_AUTHENTICATION_CLASSES': (
-
         'rest_framework.authentication.TokenAuthentication',
     ),
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "user": "100/minute",
+        "anon": "100/minute",
+    },
 }
 
 SPECTACULAR_SETTINGS = {
