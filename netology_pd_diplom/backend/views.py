@@ -1,6 +1,7 @@
 from copy import deepcopy
 from distutils.util import strtobool
 
+from django.shortcuts import render
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter, OpenApiExample
 from rest_framework.permissions import IsAuthenticated
@@ -27,6 +28,10 @@ from backend.serializers import UserSerializer, CategorySerializer, ShopSerializ
 from backend.tasks import new_user_registered, new_order, do_import
 
 from backend.permissions import IsOwner
+
+
+def Auth(request):
+    return render(request, "oauth.html")
 
 
 class RegisterAccount(APIView):

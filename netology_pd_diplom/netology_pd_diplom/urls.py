@@ -17,6 +17,8 @@ from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
+from backend.views import Auth
+
 urlpatterns = [
     path(r'jet/', include('jet.urls', 'jet')),
     path(r'jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),
@@ -25,4 +27,6 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    path('auth/', Auth, name='auth'),
+    path('auth/', include('social_django.urls', namespace='social')),
 ]
