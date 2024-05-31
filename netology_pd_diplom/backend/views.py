@@ -1,6 +1,7 @@
 from copy import deepcopy
 from distutils.util import strtobool
 
+import sentry_sdk
 from django.shortcuts import render
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter, OpenApiExample
@@ -1046,6 +1047,13 @@ class OrderView(APIView):
 
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
-
+class ExceptionAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        try:
+            # Искусственно вызванное исключение
+            raise ValueError("Это тестовое исключение для Sentry")
+        except ValueError as e:
+            sentry_sdk.capture_exception(e)
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

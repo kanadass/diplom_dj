@@ -42,6 +42,9 @@
     EMAIL_USE_SSL=True
     CELERY_BROKER_URL=redis://:6379/0
     CELERY_RESULT_BACKEND=redis://redis:6379/0
+    SOCIAL_AUTH_GOOGLE_OAUTH2_KEY=your_key
+    SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=your_secret_key
+    DSN=your_sentry_dsn
     ```
 
 3. Создайте и заполните .env.db файл в директории diplom_dj:
