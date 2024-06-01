@@ -17,7 +17,7 @@ from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
-from backend.views import Auth, ExceptionAPIView
+from backend.views import Auth
 
 
 urlpatterns = [
@@ -30,6 +30,5 @@ urlpatterns = [
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('auth/', Auth, name='auth'),
     path('auth/', include('social_django.urls', namespace='social')),
-    path('trigger-exception/', ExceptionAPIView.as_view(), name='trigger-exception'),
-
+    path('__debug__/', include('debug_toolbar.urls')),
 ]
