@@ -6,8 +6,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver, Signal
 from django_rest_passwordreset.signals import reset_password_token_created
 
-from .models import ConfirmEmailToken, User
-from .tasks import send_password_reset_email
+from .models import ConfirmEmailToken, User, Product
+from .tasks import send_password_reset_email, generate_thumbnails
 
 new_user_registered = Signal()
 
@@ -61,3 +61,15 @@ def new_order_signal(user_id, **kwargs):
         [user.email]
     )
     msg.send()
+
+
+@receiver(post_save, sender=Product)
+@receiver(post_save, sender=User)
+def handle_image_save(sender, instance, **kwargs):
+    """
+    Обработчик сигнала для создания миниатюр после сохранения объектов Product и User.
+    """
+    if isinstance(instance, Product) and instance.image:
+        generate_thumbnails.delay('Product', instance.id, 'image')
+    elif isinstance(instance, User) and instance.avatar:
+        generate_thumbnails.delay('User', instance.id, 'avatar')

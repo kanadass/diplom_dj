@@ -4,6 +4,7 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_rest_passwordreset.tokens import get_token_generator
+from easy_thumbnails.fields import ThumbnailerImageField
 
 STATE_CHOICES = (
     ('basket', 'Статус корзины'),
@@ -70,6 +71,7 @@ class User(AbstractUser):
     USERNAME_FIELD = 'email'
     email = models.EmailField(_('email address'), unique=True)
     company = models.CharField(verbose_name='Компания', max_length=40, blank=True)
+    avatar = ThumbnailerImageField(upload_to='avatars', blank=True, null=True, verbose_name='Аватар')
     position = models.CharField(verbose_name='Должность', max_length=40, blank=True)
     username_validator = UnicodeUsernameValidator()
     username = models.CharField(
@@ -139,6 +141,8 @@ class Product(models.Model):
     name = models.CharField(max_length=80, verbose_name='Название')
     category = models.ForeignKey(Category, verbose_name='Категория', related_name='products', blank=True,
                                  on_delete=models.CASCADE)
+    image = ThumbnailerImageField(upload_to='products', blank=True, null=True, verbose_name='Изображение')
+
 
     class Meta:
         verbose_name = 'Продукт'

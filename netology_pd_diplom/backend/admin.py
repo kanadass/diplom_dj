@@ -1,8 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.utils.html import format_html
 
 from backend.models import User, Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Order, OrderItem, \
     Contact, ConfirmEmailToken
+
 
 
 @admin.register(User)
@@ -14,15 +16,23 @@ class CustomUserAdmin(UserAdmin):
 
     fieldsets = (
         (None, {'fields': ('email', 'password', 'type')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'company', 'position')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'company', 'position', 'avatar', 'avatar_tag')}),
         ('Permissions', {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),)
-    list_display = ('email', 'first_name', 'last_name', 'is_staff')
+
+    readonly_fields = ('avatar_tag',)
+    list_display = ('email', 'first_name', 'last_name', 'is_staff', 'avatar')
     ordering = ('email', 'first_name', 'last_name', 'is_staff')
     list_editable = ('is_staff',)
     list_per_page = 10
+
+    def avatar_tag(self, obj):
+        if obj.avatar:
+            return format_html('<img src="{}" width="50" height="50" />'.format(obj.avatar.url))
+        return ""
+    avatar_tag.short_description = 'Аватар'
 
 @admin.register(Shop)
 class ShopAdmin(admin.ModelAdmin):
@@ -51,13 +61,19 @@ class ProductAdmin(admin.ModelAdmin):
     """
     Панель управления продуктами
     """
-    list_display = ('id', 'name', 'category')
+    list_display = ('id', 'name', 'category', 'image_tag')
     list_display_links = ('id', 'name')
     ordering = ('name',)
     list_editable = ('category',)
     list_filter = ('id', 'name', 'category')
     search_fields = ('id', 'name', 'category')
 
+    def image_tag(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="50" height="50" />'.format(obj.image.url))
+        return ""
+
+    image_tag.short_description = 'Изображение'
 
 class ProductParameterInline(admin.TabularInline):
     model = ProductParameter

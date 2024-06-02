@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'social_django',
     'cacheops',
     'debug_toolbar',
+    'easy_thumbnails',
     'backend',
 ]
 
@@ -232,6 +233,18 @@ SPECTACULAR_SETTINGS = {
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+THUMBNAIL_ALIASES = {
+    '': {
+        'avatar': {'size': (100, 100), 'crop': True},
+        'product': {'size': (300, 300), 'crop': True},
+    },
+}
+
+THUMBNAIL_BASEDIR = 'thumbnails'
 
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', default="redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', default="redis://localhost:6379/0")

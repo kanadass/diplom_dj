@@ -3,6 +3,7 @@ import yaml
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.core.validators import URLValidator
+from easy_thumbnails.files import generate_all_aliases
 from yaml import load as load_yaml, Loader
 from celery import shared_task
 from django.conf import settings
@@ -113,3 +114,15 @@ def do_import(url, user_id):
                 )
         return {'Status': True}
     return {'Status': False, 'Errors': 'Url is false'}
+
+
+@shared_task
+def generate_thumbnails(model_class, instance_id, image_field_name):
+    """
+    Асинхронная задача для генерации миниатюр для загруженного изображения.
+    """
+    Model = globals()[model_class]
+    instance = Model.objects.get(id=instance_id)
+    image_field = getattr(instance, image_field_name)
+    if image_field:
+        generate_all_aliases(image_field, True)
