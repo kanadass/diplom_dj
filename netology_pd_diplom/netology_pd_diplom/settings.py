@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'cacheops',
     'debug_toolbar',
     'easy_thumbnails',
+    'silk',
     'backend',
 ]
 
@@ -76,6 +77,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'silk.middleware.SilkyMiddleware',
 ]
 
 ROOT_URLCONF = 'netology_pd_diplom.urls'
