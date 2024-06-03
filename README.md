@@ -65,4 +65,4 @@
 
 Приложение будет доступно по адресу: [http://127.0.0.1:80/](http://127.0.0.1:80/)
 
-Документация по API: [Swagger](http://127.0.0.1:8000/api/schema/swagger-ui/)
+Документация по API: [Swagger](http://127.0.0.1:80/api/schema/swagger-ui/)

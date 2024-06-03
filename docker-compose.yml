@@ -1,28 +1,28 @@
 version: '3.9'
 services:
-#  web:
-#    build: ./netology_pd_diplom
-#    container_name: web
-#    command: sh -c "python manage.py collectstatic --noinput &&
-#              python manage.py makemigrations &&
-#              python manage.py migrate &&
-#              gunicorn netology_pd_diplom.wsgi:application --bind 0.0.0.0:8000"
-#    expose:
-#      - 8000
-#    env_file:
-#      - ./.env
-#    depends_on:
-#      - db
-#    volumes:
-#      - static_volume:/static
-#
-#  db:
-#    image: postgres:latest
-#    container_name: postgres
-#    volumes:
-#      - postgres_data:/var/lib/postgresql/data/
-#    env_file:
-#      - ./.env.db
+  web:
+    build: ./netology_pd_diplom
+    container_name: web
+    command: sh -c "python manage.py collectstatic --noinput &&
+              python manage.py makemigrations &&
+              python manage.py migrate &&
+              gunicorn netology_pd_diplom.wsgi:application --bind 0.0.0.0:8000"
+    expose:
+      - 8000
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+    volumes:
+      - static_volume:/static
+
+  db:
+    image: postgres:latest
+    container_name: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./.env.db
 
   redis:
     image: redis:latest
@@ -30,29 +30,29 @@ services:
     ports:
       - "6379:6379"
 
-#  celery:
-#    container_name: celery
-#    build:
-#      context: ./netology_pd_diplom
-#      dockerfile: Dockerfile
-#    command: celery -A netology_pd_diplom worker --loglevel=info
-#    depends_on:
-#      - web
-#      - redis
-#    env_file:
-#      - ./.env
-#
-#  nginx:
-#    restart: always
-#    build: ./conf
-#    volumes:
-#      - static_volume:/static
-#    ports:
-#      - "80:80"
-#    depends_on:
-#      - web
-#
-#
-#volumes:
-#  postgres_data:
-#  static_volume:
+  celery:
+    container_name: celery
+    build:
+      context: ./netology_pd_diplom
+      dockerfile: Dockerfile
+    command: celery -A netology_pd_diplom worker --loglevel=info
+    depends_on:
+      - web
+      - redis
+    env_file:
+      - ./.env
+
+  nginx:
+    restart: always
+    build: ./conf
+    volumes:
+      - static_volume:/static
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+
+
+volumes:
+  postgres_data:
+  static_volume:

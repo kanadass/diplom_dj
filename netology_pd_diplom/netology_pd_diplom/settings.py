@@ -125,7 +125,7 @@ DATABASES = {
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',
+        'LOCATION': 'redis://redis:6379/1',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'IGNORE_EXCEPTIONS': True,
@@ -134,7 +134,7 @@ CACHES = {
 }
 
 CACHEOPS_REDIS = {
-    'host': 'localhost',
+    'host': 'redis',
     'port': 6379,
     'db': 1,
     'socket_timeout': 3,
